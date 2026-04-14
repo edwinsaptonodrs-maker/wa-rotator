@@ -30,7 +30,7 @@ header {
   margin-bottom: 15px;
 }
 
-input, textarea {
+input {
   width: 100%;
   padding: 8px;
   margin-top: 8px;
@@ -50,9 +50,7 @@ button {
   cursor: pointer;
 }
 
-.danger {
-  background: #ef4444;
-}
+.danger { background: #ef4444; }
 
 .grid {
   display: grid;
@@ -75,12 +73,11 @@ button {
 .on { background: green; }
 .off { background: red; }
 
-/* TOAST */
 #toast {
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 10px 15px;
+  padding: 10px;
   border-radius: 6px;
   color: white;
   opacity: 0;
@@ -92,25 +89,29 @@ button {
 <body>
 
 <header>
-  <b>WA Rotator Dashboard</b>
+  <b>Dashboard</b>
   <button onclick="logout()">Logout</button>
 </header>
 
 <div class="container">
 
+<!-- ADMIN: TAMBAH USER -->
+<div class="card" id="admin-panel">
+  <h3>Tambah Staff</h3>
+  <input id="newEmail" placeholder="Email">
+  <input id="newPassword" placeholder="Password">
+  <button onclick="createStaff()">Buat Akun</button>
+</div>
+
+<!-- STAFF: INPUT WA -->
 <div class="card">
-  <h3>Tambah CS</h3>
-  <input id="nama" placeholder="Nama">
+  <h3>Nomor WhatsApp</h3>
+  <input id="nama" placeholder="Nama CS">
   <input id="wa" placeholder="628xxxx">
-  <button onclick="addUser()">Tambah</button>
+  <button onclick="addUser()">Simpan Nomor</button>
 </div>
 
-<div class="card" id="wa-setting">
-  <h3>Pesan WhatsApp</h3>
-  <textarea id="waText"></textarea>
-  <button onclick="saveText()">Simpan</button>
-</div>
-
+<!-- LIST -->
 <div id="list" class="grid"></div>
 
 </div>
@@ -126,9 +127,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  getAuth, onAuthStateChanged, signOut
+  getAuth, onAuthStateChanged, signOut,
+  createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// 🔥 CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
   authDomain: "wa-rotator.firebaseapp.com",
@@ -138,6 +141,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// SECOND AUTH (BIAR ADMIN TIDAK LOGOUT)
+const secondApp = initializeApp(firebaseConfig, "Secondary");
+const secondAuth = getAuth(secondApp);
 
 let currentUser;
 let userRole = "staff";
@@ -159,30 +166,76 @@ onAuthStateChanged(auth, async user => {
   }
 
   currentUser = user;
+
   await loadRole();
   handleAccess();
   loadUsers();
-  loadText();
 });
 
-// 🔐 ROLE
+// 🔐 LOAD ROLE
 async function loadRole() {
   const ref = doc(db, "roles", currentUser.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) userRole = snap.data().role;
 }
 
-// 🔒 ACCESS
+// 🔒 BATASI ADMIN PANEL
 function handleAccess() {
   if (userRole !== "admin") {
-    document.getElementById("wa-setting").style.display = "none";
+    document.getElementById("admin-panel").style.display = "none";
   }
 }
 
-// ➕ ADD USER
+// ➕ CREATE STAFF (TANPA WA)
+window.createStaff = async function() {
+  const email = document.getElementById("newEmail").value;
+  const password = document.getElementById("newPassword").value;
+
+  if (!email || !password) {
+    showToast("Isi semua field", "error");
+    return;
+  }
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(secondAuth, email, password);
+    const uid = userCredential.user.uid;
+
+    await setDoc(doc(db, "roles", uid), {
+      role: "staff"
+    });
+
+    showToast("Akun berhasil dibuat");
+
+  } catch (e) {
+    showToast("Gagal buat akun", "error");
+  }
+};
+
+// ➕ STAFF INPUT WA (1 USER = 1 DATA)
 window.addUser = async function() {
+
   const nama = document.getElementById("nama").value;
   const wa = document.getElementById("wa").value;
+
+  if (!nama || !wa) {
+    showToast("Isi semua field", "error");
+    return;
+  }
+
+  const snapshot = await getDocs(collection(db, "users"));
+
+  let exists = false;
+
+  snapshot.forEach(d => {
+    if (d.data().owner_uid === currentUser.uid) {
+      exists = true;
+    }
+  });
+
+  if (exists) {
+    showToast("Kamu sudah punya nomor", "error");
+    return;
+  }
 
   try {
     await addDoc(collection(db, "users"), {
@@ -193,11 +246,11 @@ window.addUser = async function() {
       owner_uid: currentUser.uid
     });
 
-    showToast("Berhasil tambah CS");
+    showToast("Nomor berhasil disimpan");
     loadUsers();
 
   } catch {
-    showToast("Gagal tambah CS", "error");
+    showToast("Gagal simpan", "error");
   }
 };
 
@@ -234,48 +287,21 @@ async function loadUsers() {
 
 // 🔄 TOGGLE
 window.toggle = async function(id, status) {
-  try {
-    await updateDoc(doc(db, "users", id), { active: !status });
-    showToast("Status diubah");
-    loadUsers();
-  } catch {
-    showToast("Gagal update", "error");
-  }
+  await updateDoc(doc(db, "users", id), {
+    active: !status
+  });
+  showToast("Status diubah");
+  loadUsers();
 };
 
 // 🗑 DELETE
 window.deleteUser = async function(id) {
-  if (!confirm("Hapus CS?")) return;
+  if (!confirm("Hapus data ini?")) return;
 
-  try {
-    await deleteDoc(doc(db, "users", id));
-    showToast("Berhasil dihapus");
-    loadUsers();
-  } catch {
-    showToast("Gagal hapus", "error");
-  }
+  await deleteDoc(doc(db, "users", id));
+  showToast("Dihapus");
+  loadUsers();
 };
-
-// 💬 SAVE TEXT
-window.saveText = async function() {
-  const text = document.getElementById("waText").value;
-
-  try {
-    await setDoc(doc(db, "settings", "config"), { wa_text: text });
-    showToast("Pesan disimpan");
-  } catch {
-    showToast("Gagal simpan", "error");
-  }
-};
-
-// 📥 LOAD TEXT
-async function loadText() {
-  const ref = doc(db, "settings", "config");
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    document.getElementById("waText").value = snap.data().wa_text;
-  }
-}
 
 // 🚪 LOGOUT
 window.logout = () => signOut(auth);
