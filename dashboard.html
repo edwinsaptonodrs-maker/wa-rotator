@@ -4,51 +4,76 @@
   <title>Dashboard CS</title>
 </head>
 <body>
-  <h2>Dashboard</h2>
 
-  <input id="nama" placeholder="Nama"><br><br>
-  <input id="wa" placeholder="Nomor WA"><br><br>
-  <label>
-    Aktif:
-    <input type="checkbox" id="active">
-  </label><br><br>
+<h2>Dashboard CS</h2>
 
-  <button onclick="save()">Simpan</button>
+<input id="nama" placeholder="Nama"><br><br>
+<input id="wa" placeholder="Nomor WA (628xxx)"><br><br>
+<label>
+  Aktif:
+  <input type="checkbox" id="active">
+</label><br><br>
 
-  <p id="status"></p>
+<button onclick="save()">Tambah CS</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<hr>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
-      authDomain: "wa-rotator.firebaseapp.com",
-      projectId: "wa-rotator",
-      storageBucket: "wa-rotator.firebasestorage.app",
-      messagingSenderId: "505170669713",
-      appId: "1:505170669713:web:e03b27c58d4f83446c8f30"
-    };
+<h3>List CS</h3>
+<div id="list"></div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    window.save = async function() {
-      const nama = document.getElementById("nama").value;
-      const wa = document.getElementById("wa").value;
-      const active = document.getElementById("active").checked;
+const firebaseConfig = {
+  apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
+  authDomain: "wa-rotator.firebaseapp.com",
+  projectId: "wa-rotator",
+};
 
-      await addDoc(collection(db, "users"), {
-        nama: nama,
-        wa_number: wa,
-        active: active,
-        total_leads: 0
-      });
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-      document.getElementById("status").innerText = "Tersimpan!";
-    }
-  </script>
+window.save = async function() {
+  const nama = document.getElementById("nama").value;
+  const wa = document.getElementById("wa").value;
+  const active = document.getElementById("active").checked;
+
+  await addDoc(collection(db, "users"), {
+    nama,
+    wa_number: wa,
+    active,
+    total_leads: 0
+  });
+
+  load();
+};
+
+async function load() {
+  const snapshot = await getDocs(collection(db, "users"));
+  let html = "";
+
+  snapshot.forEach(d => {
+    const data = d.data();
+    html += `
+      <div style="margin-bottom:10px;">
+        ${data.nama} - ${data.wa_number} 
+        [${data.active ? "AKTIF" : "OFF"}]
+        <button onclick="hapus('${d.id}')">Hapus</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("list").innerHTML = html;
+}
+
+window.hapus = async function(id) {
+  await deleteDoc(doc(db, "users", id));
+  load();
+};
+
+load();
+</script>
+
 </body>
 </html>
