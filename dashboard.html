@@ -17,7 +17,6 @@ header {
   background: #020617;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   border-bottom: 1px solid #1e293b;
 }
 
@@ -63,9 +62,7 @@ button:hover {
   background: #2563eb;
 }
 
-.danger {
-  background: #ef4444;
-}
+.danger { background: #ef4444; }
 
 .grid {
   display: grid;
@@ -112,7 +109,7 @@ button:hover {
 
 <div class="container">
 
-<!-- ADMIN -->
+<!-- ADMIN PANEL -->
 <div class="card" id="admin-panel" style="display:none;">
   <b>Tambah Staff</b>
   <div class="row">
@@ -122,14 +119,14 @@ button:hover {
   </div>
 </div>
 
-<!-- TEXT -->
+<!-- TEXT SETTING -->
 <div class="card" id="text-panel" style="display:none;">
-  <b>Pesan WA</b>
+  <b>Pesan WhatsApp</b>
   <textarea id="waText" rows="2"></textarea>
   <button onclick="saveText()">Simpan</button>
 </div>
 
-<!-- INPUT -->
+<!-- INPUT NOMOR -->
 <div class="card">
   <b>Tambah Nomor</b>
   <div class="row">
@@ -169,6 +166,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// SECOND AUTH
 const secondApp = initializeApp(firebaseConfig, "Secondary");
 const secondAuth = getAuth(secondApp);
 
@@ -208,8 +206,8 @@ async function loadRole() {
 // ACCESS
 function handleAccess() {
   if (userRole === "admin") {
-    admin-panel.style.display = "block";
-    text-panel.style.display = "block";
+    document.getElementById("admin-panel").style.display = "block";
+    document.getElementById("text-panel").style.display = "block";
   }
 }
 
@@ -223,20 +221,20 @@ window.createStaff = async () => {
   try {
     const user = await createUserWithEmailAndPassword(secondAuth,email,password);
     await setDoc(doc(db,"roles",user.user.uid),{role:"staff"});
-    showToast("Berhasil dibuat");
+    showToast("Akun dibuat");
   } catch {
-    showToast("Gagal","error");
+    showToast("Gagal buat akun","error");
   }
 };
 
-// FIX UTAMA DI SINI
+// ADD USER (FIXED)
 window.addUser = async () => {
   const nama = document.getElementById("nama").value.trim();
   const wa = document.getElementById("wa").value.trim();
 
   if (!nama || !wa) return showToast("Isi semua field","error");
   if (!/^[0-9]+$/.test(wa)) return showToast("Harus angka","error");
-  if (!wa.startsWith("62")) return showToast("Harus 62","error");
+  if (!wa.startsWith("62")) return showToast("Harus diawali 62","error");
 
   try {
     await addDoc(collection(db,"users"), {
@@ -254,8 +252,7 @@ window.addUser = async () => {
 
     loadUsers();
 
-  } catch(e) {
-    console.error(e);
+  } catch {
     showToast("Gagal","error");
   }
 };
@@ -263,6 +260,7 @@ window.addUser = async () => {
 // LOAD USERS
 async function loadUsers(){
   const snap = await getDocs(collection(db,"users"));
+  const list = document.getElementById("list");
   list.innerHTML="";
 
   snap.forEach(d=>{
@@ -280,7 +278,7 @@ async function loadUsers(){
       </span><br><br>
 
       <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
-      ${userRole==="admin"?`<button class="danger" onclick="deleteUser('${d.id}')">X</button>`:""}
+      ${userRole==="admin"?`<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>`:""}
     </div>`;
   });
 }
@@ -301,7 +299,7 @@ window.deleteUser = async(id)=>{
 // TEXT
 window.saveText = async()=>{
   await setDoc(doc(db,"settings","config"),{wa_text:waText.value});
-  showToast("Disimpan");
+  showToast("Tersimpan");
 };
 
 async function loadText(){
