@@ -23,21 +23,25 @@
     }
 
     h1 {
-      font-size: 20px;
+      font-size: 18px;
       margin: 0;
     }
 
     button {
       background: #3b82f6;
       border: none;
-      padding: 10px 16px;
+      padding: 8px 12px;
       border-radius: 8px;
       color: white;
       cursor: pointer;
     }
 
+    .danger {
+      background: #ef4444;
+    }
+
     .container {
-      padding: 24px;
+      padding: 20px;
     }
 
     .card {
@@ -105,14 +109,14 @@
     <button onclick="addUser()">Tambah</button>
   </div>
 
-  <!-- WA TEXT SETTING -->
+  <!-- WA TEXT (ADMIN ONLY) -->
   <div class="card" id="wa-setting">
     <h3>Setting Pesan WhatsApp</h3>
-    <textarea id="waText" rows="3"></textarea>
+    <textarea id="waText"></textarea>
     <button onclick="saveText()">Simpan</button>
   </div>
 
-  <!-- LIST CS -->
+  <!-- LIST -->
   <div class="grid" id="list"></div>
 
 </div>
@@ -122,7 +126,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, doc,
-  updateDoc, getDoc
+  updateDoc, getDoc, deleteDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -143,6 +147,7 @@ const auth = getAuth(app);
 let currentUser;
 let userRole = "staff";
 
+// 🔐 LOGIN CHECK
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "/login.html";
@@ -167,14 +172,14 @@ async function loadRole() {
   }
 }
 
-// 🔒 HIDE FITUR ADMIN
+// 🔒 BATASI AKSES
 function handleAccess() {
   if (userRole !== "admin") {
     document.getElementById("wa-setting").style.display = "none";
   }
 }
 
-// ➕ TAMBAH USER
+// ➕ TAMBAH CS
 async function addUser() {
   const nama = document.getElementById("nama").value;
   const wa = document.getElementById("wa").value;
@@ -190,7 +195,7 @@ async function addUser() {
   loadUsers();
 }
 
-// 🔄 LOAD USERS
+// 📋 LOAD USERS
 async function loadUsers() {
   const snapshot = await getDocs(collection(db, "users"));
   const list = document.getElementById("list");
@@ -205,9 +210,9 @@ async function loadUsers() {
       <div class="user-card">
         <b>${data.nama}</b><br>
         ${data.wa_number}<br><br>
+
         Leads: ${data.total_leads || 0}<br><br>
 
-        Status:
         <span class="badge ${data.active ? 'active' : 'inactive'}">
           ${data.active ? 'ON' : 'OFF'}
         </span>
@@ -216,26 +221,39 @@ async function loadUsers() {
         <button onclick="toggle('${docSnap.id}', ${data.active})">
           Toggle
         </button>
+
+        ${userRole === "admin" ? `
+          <button class="danger" onclick="deleteUser('${docSnap.id}')">
+            Hapus
+          </button>
+        ` : ""}
       </div>
     `;
   });
 }
 
-// 🔘 TOGGLE ON/OFF
+// 🔄 TOGGLE
 window.toggle = async (id, status) => {
   await updateDoc(doc(db, "users", id), {
     active: !status
   });
-
   loadUsers();
 };
 
-// 💬 SAVE WA TEXT
+// 🗑 DELETE (ADMIN ONLY)
+window.deleteUser = async (id) => {
+  if (!confirm("Yakin hapus CS ini?")) return;
+
+  await deleteDoc(doc(db, "users", id));
+  loadUsers();
+};
+
+// 💬 SAVE TEXT
 async function saveText() {
   const text = document.getElementById("waText").value;
 
-  await updateDoc(doc(db, "settings", "wa"), {
-    text
+  await setDoc(doc(db, "settings", "config"), {
+    wa_text: text
   });
 
   alert("Tersimpan");
@@ -243,11 +261,11 @@ async function saveText() {
 
 // 📥 LOAD TEXT
 async function loadText() {
-  const ref = doc(db, "settings", "wa");
+  const ref = doc(db, "settings", "config");
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
-    document.getElementById("waText").value = snap.data().text;
+    document.getElementById("waText").value = snap.data().wa_text;
   }
 }
 
