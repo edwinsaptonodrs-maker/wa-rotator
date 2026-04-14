@@ -21,24 +21,36 @@ header {
 
 .container {
   padding: 20px;
+  max-width: 1000px;
+  margin: auto;
 }
 
 .card {
   background: #020617;
-  padding: 15px;
+  padding: 12px;
   border-radius: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
-input {
-  width: 100%;
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+input, textarea {
   padding: 8px;
-  margin-top: 8px;
-  margin-bottom: 10px;
   border-radius: 6px;
   border: 1px solid #1e293b;
   background: #020617;
   color: white;
+}
+
+input {
+  flex: 1;
+}
+
+textarea {
+  width: 100%;
 }
 
 button {
@@ -54,26 +66,26 @@ button {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
+  grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
   gap: 10px;
 }
 
 .user {
   background: #020617;
-  padding: 12px;
-  border-radius: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .badge {
   padding: 3px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .on { background: green; }
 .off { background: red; }
 
-/* TOAST */
 #toast {
   position: fixed;
   top: 20px;
@@ -98,18 +110,29 @@ button {
 
 <!-- ADMIN PANEL -->
 <div class="card" id="admin-panel" style="display:none;">
-  <h3>Tambah Staff</h3>
-  <input id="newEmail" placeholder="Email">
-  <input id="newPassword" placeholder="Password">
-  <button onclick="createStaff()">Buat Akun</button>
+  <b>Tambah Staff</b>
+  <div class="row">
+    <input id="newEmail" placeholder="Email">
+    <input id="newPassword" placeholder="Password">
+    <button onclick="createStaff()">Buat</button>
+  </div>
+</div>
+
+<!-- SETTING TEXT WA -->
+<div class="card" id="text-panel" style="display:none;">
+  <b>Pesan WhatsApp</b>
+  <textarea id="waText" rows="2"></textarea>
+  <button onclick="saveText()">Simpan</button>
 </div>
 
 <!-- INPUT WA -->
 <div class="card">
-  <h3>Tambah Nomor WhatsApp</h3>
-  <input id="nama" placeholder="Nama CS">
-  <input id="wa" placeholder="628xxxx">
-  <button onclick="addUser()">Tambah Nomor</button>
+  <b>Tambah Nomor</b>
+  <div class="row">
+    <input id="nama" placeholder="Nama CS">
+    <input id="wa" placeholder="628xxxx">
+    <button onclick="addUser()">Tambah</button>
+  </div>
 </div>
 
 <!-- LIST -->
@@ -142,7 +165,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// secondary auth
 const secondApp = initializeApp(firebaseConfig, "Secondary");
 const secondAuth = getAuth(secondApp);
 
@@ -158,7 +180,7 @@ window.showToast = function(msg, type="success") {
   setTimeout(()=> t.style.opacity = 0, 2000);
 };
 
-// auth check
+// auth
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "/login.html";
@@ -170,27 +192,28 @@ onAuthStateChanged(auth, async user => {
   await loadRole();
   handleAccess();
   loadUsers();
+  loadText();
 });
 
-// load role
+// role
 async function loadRole() {
   const ref = doc(db, "roles", currentUser.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) userRole = snap.data().role;
 }
 
-// admin only
+// access
 function handleAccess() {
   if (userRole === "admin") {
     document.getElementById("admin-panel").style.display = "block";
+    document.getElementById("text-panel").style.display = "block";
   }
 }
 
 // create staff
 window.createStaff = async function() {
-
-  const email = document.getElementById("newEmail").value;
-  const password = document.getElementById("newPassword").value;
+  const email = newEmail.value;
+  const password = newPassword.value;
 
   if (!email || !password) {
     showToast("Isi semua field", "error");
@@ -198,113 +221,84 @@ window.createStaff = async function() {
   }
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(secondAuth, email, password);
-    const uid = userCredential.user.uid;
-
-    await setDoc(doc(db, "roles", uid), {
-      role: "staff"
-    });
-
-    showToast("Akun berhasil dibuat");
-
-  } catch (e) {
-    showToast("Gagal buat akun", "error");
+    const user = await createUserWithEmailAndPassword(secondAuth, email, password);
+    await setDoc(doc(db, "roles", user.user.uid), { role: "staff" });
+    showToast("Akun dibuat");
+  } catch {
+    showToast("Gagal", "error");
   }
 };
 
-// tambah nomor (MULTI + VALIDASI)
+// add number
 window.addUser = async function() {
+  const nama = nama.value.trim();
+  const wa = wa.value.trim();
 
-  const nama = document.getElementById("nama").value.trim();
-  const wa = document.getElementById("wa").value.trim();
+  if (!nama || !wa) return showToast("Isi semua field", "error");
+  if (!/^[0-9]+$/.test(wa)) return showToast("Harus angka", "error");
+  if (!wa.startsWith("62")) return showToast("Harus 62", "error");
 
-  if (!nama || !wa) {
-    showToast("Isi semua field", "error");
-    return;
-  }
+  await addDoc(collection(db,"users"), {
+    nama, wa_number: wa, active:true, total_leads:0, owner_uid: currentUser.uid
+  });
 
-  if (!/^[0-9]+$/.test(wa)) {
-    showToast("Nomor hanya boleh angka", "error");
-    return;
-  }
-
-  if (!wa.startsWith("62")) {
-    showToast("Nomor harus diawali 62", "error");
-    return;
-  }
-
-  try {
-    await addDoc(collection(db, "users"), {
-      nama,
-      wa_number: wa,
-      active: true,
-      total_leads: 0,
-      owner_uid: currentUser.uid
-    });
-
-    showToast("Nomor berhasil ditambahkan");
-
-    document.getElementById("nama").value = "";
-    document.getElementById("wa").value = "";
-
-    loadUsers();
-
-  } catch {
-    showToast("Gagal menambahkan nomor", "error");
-  }
+  showToast("Ditambahkan");
+  loadUsers();
 };
 
 // load users
 async function loadUsers() {
-  const snap = await getDocs(collection(db, "users"));
-  const list = document.getElementById("list");
+  const snap = await getDocs(collection(db,"users"));
   list.innerHTML = "";
 
-  snap.forEach(d => {
+  snap.forEach(d=>{
     const data = d.data();
-
-    if (userRole !== "admin" && data.owner_uid !== currentUser.uid) return;
+    if (userRole!=="admin" && data.owner_uid!==currentUser.uid) return;
 
     list.innerHTML += `
-      <div class="user">
-        <b>${data.nama}</b><br>
-        ${data.wa_number}<br>
-        Leads: ${data.total_leads || 0}<br><br>
+    <div class="user">
+      <b>${data.nama}</b><br>
+      ${data.wa_number}<br>
+      Leads: ${data.total_leads||0}<br>
 
-        <span class="badge ${data.active ? 'on':'off'}">
-          ${data.active ? 'ON':'OFF'}
-        </span><br><br>
+      <span class="badge ${data.active?'on':'off'}">
+        ${data.active?'ON':'OFF'}
+      </span><br>
 
-        <button onclick="toggle('${d.id}', ${data.active})">Toggle</button>
-
-        ${userRole==="admin" ? `
-          <button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>
-        `:""}
-      </div>
-    `;
+      <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
+      ${userRole==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">X</button>`:""}
+    </div>`;
   });
 }
 
 // toggle
-window.toggle = async function(id, status) {
-  await updateDoc(doc(db, "users", id), {
-    active: !status
-  });
-  showToast("Status diubah");
+window.toggle = async (id,status)=>{
+  await updateDoc(doc(db,"users",id),{active:!status});
   loadUsers();
 };
 
 // delete
-window.deleteUser = async function(id) {
-  if (!confirm("Hapus data ini?")) return;
-
-  await deleteDoc(doc(db, "users", id));
-  showToast("Dihapus");
+window.deleteUser = async (id)=>{
+  if(!confirm("Hapus?"))return;
+  await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
 
+// save text
+window.saveText = async ()=>{
+  const text = waText.value;
+  await setDoc(doc(db,"settings","config"), { wa_text:text });
+  showToast("Disimpan");
+};
+
+// load text
+async function loadText(){
+  const snap = await getDoc(doc(db,"settings","config"));
+  if(snap.exists()) waText.value = snap.data().wa_text || "";
+}
+
 // logout
-window.logout = () => signOut(auth);
+window.logout = ()=>signOut(auth);
 
 </script>
 
