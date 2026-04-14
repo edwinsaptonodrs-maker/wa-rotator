@@ -6,63 +6,66 @@
 
 <style>
 body {
-  font-family: Arial;
+  font-family: 'Segoe UI', sans-serif;
   background: #0f172a;
   color: white;
   margin: 0;
 }
 
 header {
-  padding: 15px;
+  padding: 16px 24px;
   background: #020617;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
 }
 
 .container {
-  padding: 20px;
   max-width: 1000px;
   margin: auto;
+  padding: 20px;
 }
 
 .card {
   background: #020617;
-  padding: 12px;
+  border: 1px solid #1e293b;
+  padding: 14px;
   border-radius: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 input, textarea {
-  padding: 8px;
-  border-radius: 6px;
+  padding: 10px;
+  border-radius: 8px;
   border: 1px solid #1e293b;
   background: #020617;
   color: white;
-}
-
-input {
   flex: 1;
 }
 
-textarea {
-  width: 100%;
-}
-
 button {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #3b82f6;
   color: white;
   cursor: pointer;
 }
 
-.danger { background: #ef4444; }
+button:hover {
+  background: #2563eb;
+}
+
+.danger {
+  background: #ef4444;
+}
 
 .grid {
   display: grid;
@@ -72,8 +75,9 @@ button {
 
 .user {
   background: #020617;
-  padding: 10px;
-  border-radius: 8px;
+  border: 1px solid #1e293b;
+  padding: 12px;
+  border-radius: 10px;
   font-size: 13px;
 }
 
@@ -83,15 +87,15 @@ button {
   font-size: 11px;
 }
 
-.on { background: green; }
-.off { background: red; }
+.on { background: #16a34a; }
+.off { background: #dc2626; }
 
 #toast {
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
   color: white;
   opacity: 0;
   transition: 0.3s;
@@ -102,13 +106,13 @@ button {
 <body>
 
 <header>
-  <b>Dashboard</b>
+  <b>WA Rotator</b>
   <button onclick="logout()">Logout</button>
 </header>
 
 <div class="container">
 
-<!-- ADMIN PANEL -->
+<!-- ADMIN -->
 <div class="card" id="admin-panel" style="display:none;">
   <b>Tambah Staff</b>
   <div class="row">
@@ -118,14 +122,14 @@ button {
   </div>
 </div>
 
-<!-- SETTING TEXT WA -->
+<!-- TEXT -->
 <div class="card" id="text-panel" style="display:none;">
-  <b>Pesan WhatsApp</b>
+  <b>Pesan WA</b>
   <textarea id="waText" rows="2"></textarea>
   <button onclick="saveText()">Simpan</button>
 </div>
 
-<!-- INPUT WA -->
+<!-- INPUT -->
 <div class="card">
   <b>Tambah Nomor</b>
   <div class="row">
@@ -171,7 +175,7 @@ const secondAuth = getAuth(secondApp);
 let currentUser;
 let userRole = "staff";
 
-// toast
+// TOAST
 window.showToast = function(msg, type="success") {
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -180,7 +184,7 @@ window.showToast = function(msg, type="success") {
   setTimeout(()=> t.style.opacity = 0, 2000);
 };
 
-// auth
+// AUTH
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "/login.html";
@@ -195,109 +199,117 @@ onAuthStateChanged(auth, async user => {
   loadText();
 });
 
-// role
+// ROLE
 async function loadRole() {
-  const ref = doc(db, "roles", currentUser.uid);
-  const snap = await getDoc(ref);
+  const snap = await getDoc(doc(db,"roles",currentUser.uid));
   if (snap.exists()) userRole = snap.data().role;
 }
 
-// access
+// ACCESS
 function handleAccess() {
   if (userRole === "admin") {
-    document.getElementById("admin-panel").style.display = "block";
-    document.getElementById("text-panel").style.display = "block";
+    admin-panel.style.display = "block";
+    text-panel.style.display = "block";
   }
 }
 
-// create staff
-window.createStaff = async function() {
-  const email = newEmail.value;
-  const password = newPassword.value;
+// CREATE STAFF
+window.createStaff = async () => {
+  const email = document.getElementById("newEmail").value;
+  const password = document.getElementById("newPassword").value;
 
-  if (!email || !password) {
-    showToast("Isi semua field", "error");
-    return;
-  }
+  if (!email || !password) return showToast("Isi semua field","error");
 
   try {
-    const user = await createUserWithEmailAndPassword(secondAuth, email, password);
-    await setDoc(doc(db, "roles", user.user.uid), { role: "staff" });
-    showToast("Akun dibuat");
+    const user = await createUserWithEmailAndPassword(secondAuth,email,password);
+    await setDoc(doc(db,"roles",user.user.uid),{role:"staff"});
+    showToast("Berhasil dibuat");
   } catch {
-    showToast("Gagal", "error");
+    showToast("Gagal","error");
   }
 };
 
-// add number
-window.addUser = async function() {
-  const nama = nama.value.trim();
-  const wa = wa.value.trim();
+// FIX UTAMA DI SINI
+window.addUser = async () => {
+  const nama = document.getElementById("nama").value.trim();
+  const wa = document.getElementById("wa").value.trim();
 
-  if (!nama || !wa) return showToast("Isi semua field", "error");
-  if (!/^[0-9]+$/.test(wa)) return showToast("Harus angka", "error");
-  if (!wa.startsWith("62")) return showToast("Harus 62", "error");
+  if (!nama || !wa) return showToast("Isi semua field","error");
+  if (!/^[0-9]+$/.test(wa)) return showToast("Harus angka","error");
+  if (!wa.startsWith("62")) return showToast("Harus 62","error");
 
-  await addDoc(collection(db,"users"), {
-    nama, wa_number: wa, active:true, total_leads:0, owner_uid: currentUser.uid
-  });
+  try {
+    await addDoc(collection(db,"users"), {
+      nama,
+      wa_number: wa,
+      active:true,
+      total_leads:0,
+      owner_uid: currentUser.uid
+    });
 
-  showToast("Ditambahkan");
-  loadUsers();
+    showToast("Berhasil ditambahkan");
+
+    document.getElementById("nama").value = "";
+    document.getElementById("wa").value = "";
+
+    loadUsers();
+
+  } catch(e) {
+    console.error(e);
+    showToast("Gagal","error");
+  }
 };
 
-// load users
-async function loadUsers() {
+// LOAD USERS
+async function loadUsers(){
   const snap = await getDocs(collection(db,"users"));
-  list.innerHTML = "";
+  list.innerHTML="";
 
   snap.forEach(d=>{
-    const data = d.data();
-    if (userRole!=="admin" && data.owner_uid!==currentUser.uid) return;
+    const data=d.data();
+    if(userRole!=="admin" && data.owner_uid!==currentUser.uid) return;
 
-    list.innerHTML += `
+    list.innerHTML+=`
     <div class="user">
       <b>${data.nama}</b><br>
       ${data.wa_number}<br>
-      Leads: ${data.total_leads||0}<br>
+      Leads: ${data.total_leads||0}<br><br>
 
       <span class="badge ${data.active?'on':'off'}">
         ${data.active?'ON':'OFF'}
-      </span><br>
+      </span><br><br>
 
       <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
-      ${userRole==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">X</button>`:""}
+      ${userRole==="admin"?`<button class="danger" onclick="deleteUser('${d.id}')">X</button>`:""}
     </div>`;
   });
 }
 
-// toggle
-window.toggle = async (id,status)=>{
+// TOGGLE
+window.toggle = async(id,status)=>{
   await updateDoc(doc(db,"users",id),{active:!status});
   loadUsers();
 };
 
-// delete
-window.deleteUser = async (id)=>{
-  if(!confirm("Hapus?"))return;
+// DELETE
+window.deleteUser = async(id)=>{
+  if(!confirm("Hapus?")) return;
   await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
 
-// save text
-window.saveText = async ()=>{
-  const text = waText.value;
-  await setDoc(doc(db,"settings","config"), { wa_text:text });
+// TEXT
+window.saveText = async()=>{
+  await setDoc(doc(db,"settings","config"),{wa_text:waText.value});
   showToast("Disimpan");
 };
 
-// load text
 async function loadText(){
   const snap = await getDoc(doc(db,"settings","config"));
   if(snap.exists()) waText.value = snap.data().wa_text || "";
 }
 
-// logout
+// LOGOUT
 window.logout = ()=>signOut(auth);
 
 </script>
