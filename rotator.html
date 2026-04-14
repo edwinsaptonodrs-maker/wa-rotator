@@ -1,33 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>Redirecting...</title>
+  <meta charset="UTF-8">
+  <title>Menghubungkan...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- BIAR CEPAT -->
-<meta http-equiv="refresh" content="0;url=about:blank">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
 
-<style>
-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background: #0f172a;
-  color: white;
-  font-family: Arial;
-}
-</style>
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #334155;
+      border-top: 4px solid #22c55e;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .msg {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
 </head>
 
 <body>
+
+<div>
+  <div class="loader"></div>
+  <div class="msg">Menghubungkan ke CS...</div>
+</div>
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, doc, updateDoc
+  getFirestore, collection, getDocs, addDoc,
+  doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// 🔥 GANTI DENGAN CONFIG KAMU
 const firebaseConfig = {
   apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
   authDomain: "wa-rotator.firebaseapp.com",
@@ -37,55 +65,75 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-(async () => {
-
+async function run() {
   try {
 
-    const snap = await getDocs(collection(db, "users"));
+    // 🔹 Ambil semua CS aktif
+    const snapshot = await getDocs(collection(db, "users"));
+    let activeUsers = [];
 
-    let users = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
 
-    snap.forEach(d => {
-      const data = d.data();
       if (data.active) {
-        users.push({ id: d.id, ...data });
+        activeUsers.push({
+          id: docSnap.id,
+          ...data
+        });
       }
     });
 
-    if (users.length === 0) {
-      document.body.innerHTML = "Tidak ada CS aktif";
+    // ❌ Kalau tidak ada CS aktif
+    if (activeUsers.length === 0) {
+      document.querySelector(".msg").innerText = "Tidak ada CS tersedia";
       return;
     }
 
-    // RANDOM CEPAT
-    const pick = users[Math.floor(Math.random() * users.length)];
+    // 🔹 Pilih random CS
+    const selected = activeUsers[Math.floor(Math.random() * activeUsers.length)];
 
-    // AMBIL PESAN
-    const textSnap = await getDocs(collection(db, "settings"));
-    let text = "Halo, saya tertarik";
+    // 🔹 Ambil pesan WA dari dashboard
+    let pesan = "Halo";
+    const ref = doc(db, "settings", "config");
+    const snap = await getDoc(ref);
 
-    textSnap.forEach(d => {
-      if (d.id === "config") {
-        text = d.data().wa_text || text;
-      }
+    if (snap.exists()) {
+      pesan = snap.data().wa_text || "Halo";
+    }
+
+    const encoded = encodeURIComponent(pesan);
+
+    // 🔥 SIMPAN LEAD
+    await addDoc(collection(db, "leads"), {
+      nama: selected.nama,
+      wa_number: selected.wa_number,
+      timestamp: new Date(),
+      source: "facebook"
     });
 
-    // UPDATE LEADS (BACKGROUND, TANPA NUNGGU)
-    updateDoc(doc(db, "users", pick.id), {
-      total_leads: (pick.total_leads || 0) + 1
+    // 🔥 UPDATE COUNTER
+    await updateDoc(doc(db, "users", selected.id), {
+      total_leads: (selected.total_leads || 0) + 1
     });
 
-    // 🚀 REDIRECT CEPAT
-    window.location.href =
-      `https://wa.me/${pick.wa_number}?text=${encodeURIComponent(text)}`;
+    // 🔥 REDIRECT (DELAY AGAR TIDAK KE-SKIP)
+    setTimeout(() => {
+      window.location.href =
+        "https://wa.me/" + selected.wa_number +
+        "?text=" + encoded;
+    }, 200);
 
-  } catch (e) {
-    document.body.innerHTML = "Error rotator";
-    console.error(e);
+  } catch (error) {
+    console.error("ROTATOR ERROR:", error);
+
+    document.querySelector(".msg").innerText =
+      "Terjadi kesalahan, coba lagi...";
   }
+}
 
-})();
+run();
 
 </script>
+
 </body>
 </html>
