@@ -1,41 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>Login CS</title>
-</head>
-<body>
-  <h2>Login Staff</h2>
-  <input id="email" placeholder="Email"><br><br>
-  <input id="password" type="password" placeholder="Password"><br><br>
-  <button onclick="login()">Login</button>
+  <meta charset="UTF-8">
+  <title>Login - WA Rotator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
-      authDomain: "wa-rotator.firebaseapp.com",
-      projectId: "wa-rotator",
-      storageBucket: "wa-rotator.firebasestorage.app",
-      messagingSenderId: "505170669713",
-      appId: "1:505170669713:web:e03b27c58d4f83446c8f30"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    window.login = async function() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = "dashboard.html";
-      } catch (err) {
-        alert("Login gagal: " + err.message);
-      }
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a, #020617);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
     }
-  </script>
+
+    .card {
+      background: #020617;
+      padding: 30px;
+      border-radius: 16px;
+      width: 320px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      background: #020617;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #3b82f6;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    .error {
+      color: #ef4444;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="login()" id="btnLogin">Masuk</button>
+
+  <div class="error" id="error"></div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// 🔥 GANTI CONFIG
+const firebaseConfig = {
+  apiKey: "ISI_API_KEY",
+  authDomain: "ISI_AUTH_DOMAIN",
+  projectId: "ISI_PROJECT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// 🔐 LOGIN
+window.login = async function() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const btn = document.getElementById("btnLogin");
+  const errorDiv = document.getElementById("error");
+
+  errorDiv.innerText = "";
+  btn.innerText = "Loading...";
+  btn.classList.add("loading");
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+
+    window.location.href = "/dashboard.html";
+
+  } catch (e) {
+    errorDiv.innerText = "Email atau password salah";
+  }
+
+  btn.innerText = "Masuk";
+  btn.classList.remove("loading");
+};
+
+</script>
+
 </body>
 </html>
