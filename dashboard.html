@@ -4,8 +4,8 @@
   <title>Dashboard CS</title>
   <style>
     body { font-family: Arial; padding:20px; background:#f5f5f5; }
-    .card { background:#fff; padding:15px; border-radius:10px; margin-bottom:10px; }
-    .btn { padding:5px 10px; cursor:pointer; border:none; border-radius:5px; }
+    .card { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; }
+    .btn { padding:6px 12px; cursor:pointer; border:none; border-radius:5px; }
     .on { background:green; color:#fff; }
     .off { background:red; color:#fff; }
   </style>
@@ -15,12 +15,22 @@
 
 <h2>Dashboard CS</h2>
 
+<!-- 🔹 INPUT CS -->
 <div class="card">
+  <h3>Tambah CS</h3>
   <input id="nama" placeholder="Nama"><br><br>
   <input id="wa" placeholder="Nomor WA (628xxx)"><br><br>
   <button onclick="save()">Tambah CS</button>
 </div>
 
+<!-- 🔹 SETTING PESAN -->
+<div class="card">
+  <h3>Setting Pesan WhatsApp</h3>
+  <textarea id="wa_text" style="width:100%;height:80px;"></textarea><br><br>
+  <button onclick="saveText()">Simpan Pesan</button>
+</div>
+
+<!-- 🔹 LIST CS -->
 <h3>List CS</h3>
 <div id="list"></div>
 
@@ -29,7 +39,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { 
   getFirestore, collection, addDoc, getDocs, 
-  deleteDoc, doc, updateDoc 
+  deleteDoc, doc, updateDoc, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -42,11 +52,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// 👉 ADMIN EMAIL (ubah sesuai kamu)
+// 🔐 GANTI EMAIL ADMIN DI SINI
 const ADMIN_EMAIL = "admin@gmail.com";
 
 let currentUser = null;
 
+// 🔒 CEK LOGIN
 onAuthStateChanged(auth, user => {
   if (!user) {
     alert("Harus login dulu");
@@ -55,8 +66,10 @@ onAuthStateChanged(auth, user => {
   }
   currentUser = user;
   load();
+  loadText();
 });
 
+// ➕ TAMBAH CS
 window.save = async function() {
   const nama = document.getElementById("nama").value;
   const wa = document.getElementById("wa").value;
@@ -72,6 +85,7 @@ window.save = async function() {
   load();
 };
 
+// 📋 LOAD LIST CS
 async function load() {
   const snapshot = await getDocs(collection(db, "users"));
   let html = "";
@@ -79,7 +93,7 @@ async function load() {
   snapshot.forEach(d => {
     const data = d.data();
 
-    // 👉 filter: staff hanya lihat miliknya
+    // filter: staff hanya lihat miliknya
     if (
       currentUser.email !== ADMIN_EMAIL &&
       data.owner_uid !== currentUser.uid
@@ -104,6 +118,7 @@ async function load() {
   document.getElementById("list").innerHTML = html;
 }
 
+// 🔄 TOGGLE ON/OFF
 window.toggle = async function(id, current) {
   await updateDoc(doc(db, "users", id), {
     active: !current
@@ -111,10 +126,33 @@ window.toggle = async function(id, current) {
   load();
 };
 
+// ❌ HAPUS CS
 window.hapus = async function(id) {
   await deleteDoc(doc(db, "users", id));
   load();
 };
+
+// 📝 LOAD TEXT WA
+async function loadText() {
+  const ref = doc(db, "settings", "config");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    document.getElementById("wa_text").value = snap.data().wa_text;
+  }
+}
+
+// 💾 SIMPAN TEXT WA
+window.saveText = async function() {
+  const text = document.getElementById("wa_text").value;
+
+  await setDoc(doc(db, "settings", "config"), {
+    wa_text: text
+  });
+
+  alert("Teks berhasil disimpan");
+};
+
 </script>
 
 </body>
