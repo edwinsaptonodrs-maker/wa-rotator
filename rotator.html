@@ -1,15 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>Redirect...</title>
+  <meta charset="UTF-8">
+  <title>Menghubungkan...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #334155;
+      border-top: 4px solid #22c55e;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .msg {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
 </head>
+
 <body>
-  <h3>Loading...</h3>
+
+<div>
+  <div class="loader"></div>
+  <div class="msg">Menghubungkan ke CS...</div>
+</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, addDoc,
+  doc, getDoc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// 🔥 GANTI DENGAN CONFIG KAMU
 const firebaseConfig = {
   apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
   authDomain: "wa-rotator.firebaseapp.com",
@@ -20,51 +66,73 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function run() {
+  try {
 
-  // 🔹 ambil semua CS aktif
-  const snapshot = await getDocs(collection(db, "users"));
-  let activeUsers = [];
+    // 🔹 Ambil semua CS aktif
+    const snapshot = await getDocs(collection(db, "users"));
+    let activeUsers = [];
 
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    if (data.active) activeUsers.push(data);
-  });
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
 
-  if (activeUsers.length === 0) {
-    alert("Tidak ada CS aktif");
-    return;
+      if (data.active) {
+        activeUsers.push({
+          id: docSnap.id,
+          ...data
+        });
+      }
+    });
+
+    // ❌ Kalau tidak ada CS aktif
+    if (activeUsers.length === 0) {
+      document.querySelector(".msg").innerText = "Tidak ada CS tersedia";
+      return;
+    }
+
+    // 🔹 Pilih random CS
+    const selected = activeUsers[Math.floor(Math.random() * activeUsers.length)];
+
+    // 🔹 Ambil pesan WA dari dashboard
+    let pesan = "Halo";
+    const ref = doc(db, "settings", "config");
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      pesan = snap.data().wa_text || "Halo";
+    }
+
+    const encoded = encodeURIComponent(pesan);
+
+    // 🔥 SIMPAN LEAD
+    await addDoc(collection(db, "leads"), {
+      nama: selected.nama,
+      wa_number: selected.wa_number,
+      timestamp: new Date(),
+      source: "facebook"
+    });
+
+    // 🔥 UPDATE COUNTER
+    await updateDoc(doc(db, "users", selected.id), {
+      total_leads: (selected.total_leads || 0) + 1
+    });
+
+    // 🔥 REDIRECT (DELAY AGAR TIDAK KE-SKIP)
+    setTimeout(() => {
+      window.location.href =
+        "https://wa.me/" + selected.wa_number +
+        "?text=" + encoded;
+    }, 200);
+
+  } catch (error) {
+    console.error("ROTATOR ERROR:", error);
+
+    document.querySelector(".msg").innerText =
+      "Terjadi kesalahan, coba lagi...";
   }
-
-  // 🔹 pilih random
-  const selected = activeUsers[Math.floor(Math.random() * activeUsers.length)];
-
-  // 🔹 ambil teks dari dashboard
-  const ref = doc(db, "settings", "config");
-  const snap = await getDoc(ref);
-
-  let pesan = "Halo";
-
-  if (snap.exists()) {
-    pesan = snap.data().wa_text;
-  }
-
-  const encoded = encodeURIComponent(pesan);
-
-  // 🔹 simpan lead
-  await addDoc(collection(db, "leads"), {
-    nama: selected.nama,
-    wa_number: selected.wa_number,
-    timestamp: new Date(),
-    source: "facebook"
-  });
-
-  // 🔹 redirect WA
-  window.location.href =
-    "https://wa.me/" + selected.wa_number +
-    "?text=" + encoded;
 }
 
 run();
+
 </script>
 
 </body>
