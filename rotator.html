@@ -6,51 +6,66 @@
 <body>
   <h3>Loading...</h3>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
-      authDomain: "wa-rotator.firebaseapp.com",
-      projectId: "wa-rotator",
-      storageBucket: "wa-rotator.firebasestorage.app",
-      messagingSenderId: "505170669713",
-      appId: "1:505170669713:web:e03b27c58d4f83446c8f30"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
+  authDomain: "wa-rotator.firebaseapp.com",
+  projectId: "wa-rotator"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    async function run() {
-      const snapshot = await getDocs(collection(db, "users"));
+async function run() {
 
-      let activeUsers = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.active) activeUsers.push(data);
-      });
+  // 🔹 ambil semua CS aktif
+  const snapshot = await getDocs(collection(db, "users"));
+  let activeUsers = [];
 
-      if (activeUsers.length === 0) {
-        alert("Tidak ada CS aktif");
-        return;
-      }
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.active) activeUsers.push(data);
+  });
 
-      const selected = activeUsers[Math.floor(Math.random() * activeUsers.length)];
+  if (activeUsers.length === 0) {
+    alert("Tidak ada CS aktif");
+    return;
+  }
 
-      await addDoc(collection(db, "leads"), {
-        nama: selected.nama,
-        wa_number: selected.wa_number,
-        timestamp: new Date(),
-        source: "facebook"
-      });
+  // 🔹 pilih random
+  const selected = activeUsers[Math.floor(Math.random() * activeUsers.length)];
 
-      window.location.href =
-        "https://wa.me/" + selected.wa_number +
-        "?text=Halo%20saya%20dari%20FB";
-    }
+  // 🔹 ambil teks dari dashboard
+  const ref = doc(db, "settings", "config");
+  const snap = await getDoc(ref);
 
-    run();
-  </script>
+  let pesan = "Halo";
+
+  if (snap.exists()) {
+    pesan = snap.data().wa_text;
+  }
+
+  const encoded = encodeURIComponent(pesan);
+
+  // 🔹 simpan lead
+  await addDoc(collection(db, "leads"), {
+    nama: selected.nama,
+    wa_number: selected.wa_number,
+    timestamp: new Date(),
+    source: "facebook"
+  });
+
+  // 🔹 redirect WA
+  window.location.href =
+    "https://wa.me/" + selected.wa_number +
+    "?text=" + encoded;
+}
+
+run();
+</script>
+
 </body>
 </html>
