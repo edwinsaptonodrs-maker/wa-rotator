@@ -6,49 +6,60 @@
 
 <style>
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   background: #0f172a;
   color: white;
   margin: 0;
 }
 
+/* HEADER */
 header {
-  padding: 16px 24px;
   background: #020617;
+  padding: 16px 24px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   border-bottom: 1px solid #1e293b;
 }
 
+header b {
+  font-size: 18px;
+}
+
+/* CONTAINER */
 .container {
-  max-width: 1000px;
+  max-width: 900px;
   margin: auto;
   padding: 20px;
 }
 
+/* CARD */
 .card {
   background: #020617;
   border: 1px solid #1e293b;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 14px;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
-.row {
+/* FORM */
+.form-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 input, textarea {
+  flex: 1;
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #1e293b;
-  background: #020617;
+  background: #0f172a;
   color: white;
-  flex: 1;
 }
 
+/* BUTTON */
 button {
   padding: 10px 14px;
   border: none;
@@ -56,46 +67,68 @@ button {
   background: #3b82f6;
   color: white;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 button:hover {
   background: #2563eb;
 }
 
-.danger { background: #ef4444; }
+.danger {
+  background: #ef4444;
+}
 
+/* USER GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+  gap: 12px;
 }
 
-.user {
+/* USER CARD */
+.user-card {
   background: #020617;
   border: 1px solid #1e293b;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 12px;
+  padding: 14px;
 }
 
+.user-card b {
+  font-size: 14px;
+}
+
+.user-card small {
+  color: #94a3b8;
+}
+
+/* BADGE */
 .badge {
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: inline-block;
+  margin-top: 8px;
 }
 
 .on { background: #16a34a; }
 .off { background: #dc2626; }
 
+/* TOAST */
 #toast {
   position: fixed;
   top: 20px;
   right: 20px;
   padding: 10px 14px;
   border-radius: 8px;
-  color: white;
   opacity: 0;
   transition: 0.3s;
+}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .form-row {
+    flex-direction: column;
+  }
 }
 </style>
 </head>
@@ -109,27 +142,29 @@ button:hover {
 
 <div class="container">
 
-<!-- ADMIN PANEL -->
+<!-- ADMIN -->
 <div class="card" id="admin-panel" style="display:none;">
   <b>Tambah Staff</b>
-  <div class="row">
+  <div class="form-row">
     <input id="newEmail" placeholder="Email">
     <input id="newPassword" placeholder="Password">
     <button onclick="createStaff()">Buat</button>
   </div>
 </div>
 
-<!-- TEXT SETTING -->
+<!-- TEXT -->
 <div class="card" id="text-panel" style="display:none;">
   <b>Pesan WhatsApp</b>
-  <textarea id="waText" rows="2"></textarea>
-  <button onclick="saveText()">Simpan</button>
+  <textarea id="waText" rows="3"></textarea>
+  <div style="margin-top:10px;">
+    <button onclick="saveText()">Simpan</button>
+  </div>
 </div>
 
-<!-- INPUT NOMOR -->
+<!-- INPUT -->
 <div class="card">
-  <b>Tambah Nomor</b>
-  <div class="row">
+  <b>Tambah Nomor CS</b>
+  <div class="form-row">
     <input id="nama" placeholder="Nama CS">
     <input id="wa" placeholder="628xxxx">
     <button onclick="addUser()">Tambah</button>
@@ -166,137 +201,116 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// SECOND AUTH
 const secondApp = initializeApp(firebaseConfig, "Secondary");
 const secondAuth = getAuth(secondApp);
 
 let currentUser;
 let userRole = "staff";
 
-// TOAST
-window.showToast = function(msg, type="success") {
+/* TOAST */
+function showToast(msg, type="success"){
   const t = document.getElementById("toast");
   t.innerText = msg;
-  t.style.background = type === "error" ? "#dc2626" : "#16a34a";
+  t.style.background = type==="error" ? "#dc2626" : "#16a34a";
   t.style.opacity = 1;
-  setTimeout(()=> t.style.opacity = 0, 2000);
-};
+  setTimeout(()=> t.style.opacity = 0,2000);
+}
 
-// AUTH
-onAuthStateChanged(auth, async user => {
-  if (!user) {
-    window.location.href = "/login.html";
-    return;
-  }
+/* AUTH */
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="/login.html";
 
   currentUser = user;
 
-  await loadRole();
-  handleAccess();
+  const roleSnap = await getDoc(doc(db,"roles",user.uid));
+  if(roleSnap.exists()) userRole = roleSnap.data().role;
+
+  if(userRole==="admin"){
+    document.getElementById("admin-panel").style.display="block";
+    document.getElementById("text-panel").style.display="block";
+  }
+
   loadUsers();
   loadText();
 });
 
-// ROLE
-async function loadRole() {
-  const snap = await getDoc(doc(db,"roles",currentUser.uid));
-  if (snap.exists()) userRole = snap.data().role;
-}
-
-// ACCESS
-function handleAccess() {
-  if (userRole === "admin") {
-    document.getElementById("admin-panel").style.display = "block";
-    document.getElementById("text-panel").style.display = "block";
-  }
-}
-
-// CREATE STAFF
-window.createStaff = async () => {
-  const email = document.getElementById("newEmail").value;
-  const password = document.getElementById("newPassword").value;
-
-  if (!email || !password) return showToast("Isi semua field","error");
-
-  try {
-    const user = await createUserWithEmailAndPassword(secondAuth,email,password);
-    await setDoc(doc(db,"roles",user.user.uid),{role:"staff"});
-    showToast("Akun dibuat");
-  } catch {
-    showToast("Gagal buat akun","error");
-  }
-};
-
-// ADD USER (FIXED)
-window.addUser = async () => {
+/* ADD USER */
+window.addUser = async ()=>{
   const nama = document.getElementById("nama").value.trim();
   const wa = document.getElementById("wa").value.trim();
 
-  if (!nama || !wa) return showToast("Isi semua field","error");
-  if (!/^[0-9]+$/.test(wa)) return showToast("Harus angka","error");
-  if (!wa.startsWith("62")) return showToast("Harus diawali 62","error");
+  if(!nama || !wa) return showToast("Isi semua field","error");
+  if(!/^[0-9]+$/.test(wa)) return showToast("Harus angka","error");
+  if(!wa.startsWith("62")) return showToast("Harus diawali 62","error");
 
-  try {
-    await addDoc(collection(db,"users"), {
-      nama,
-      wa_number: wa,
-      active:true,
-      total_leads:0,
-      owner_uid: currentUser.uid
-    });
+  await addDoc(collection(db,"users"),{
+    nama, wa_number:wa, active:true, total_leads:0, owner_uid:currentUser.uid
+  });
 
-    showToast("Berhasil ditambahkan");
+  showToast("Berhasil ditambahkan");
 
-    document.getElementById("nama").value = "";
-    document.getElementById("wa").value = "";
+  document.getElementById("nama").value="";
+  document.getElementById("wa").value="";
 
-    loadUsers();
-
-  } catch {
-    showToast("Gagal","error");
-  }
+  loadUsers();
 };
 
-// LOAD USERS
+/* LOAD USERS */
 async function loadUsers(){
   const snap = await getDocs(collection(db,"users"));
   const list = document.getElementById("list");
   list.innerHTML="";
 
   snap.forEach(d=>{
-    const data=d.data();
+    const data = d.data();
+
     if(userRole!=="admin" && data.owner_uid!==currentUser.uid) return;
 
-    list.innerHTML+=`
-    <div class="user">
+    list.innerHTML += `
+    <div class="user-card">
       <b>${data.nama}</b><br>
-      ${data.wa_number}<br>
-      Leads: ${data.total_leads||0}<br><br>
+      <small>${data.wa_number}</small><br>
+      Leads: ${data.total_leads||0}<br>
 
       <span class="badge ${data.active?'on':'off'}">
         ${data.active?'ON':'OFF'}
-      </span><br><br>
+      </span>
 
-      <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
-      ${userRole==="admin"?`<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>`:""}
+      <div style="margin-top:10px; display:flex; gap:6px;">
+        <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
+        ${userRole==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>` : ""}
+      </div>
     </div>`;
   });
 }
 
-// TOGGLE
+/* TOGGLE */
 window.toggle = async(id,status)=>{
   await updateDoc(doc(db,"users",id),{active:!status});
   loadUsers();
 };
 
-// DELETE
+/* DELETE */
 window.deleteUser = async(id)=>{
   if(!confirm("Hapus?")) return;
   await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
 
-// TEXT
+/* STAFF */
+window.createStaff = async ()=>{
+  const email = newEmail.value;
+  const pass = newPassword.value;
+
+  if(!email||!pass) return showToast("Isi semua","error");
+
+  const u = await createUserWithEmailAndPassword(secondAuth,email,pass);
+  await setDoc(doc(db,"roles",u.user.uid),{role:"staff"});
+
+  showToast("Staff dibuat");
+};
+
+/* TEXT */
 window.saveText = async()=>{
   await setDoc(doc(db,"settings","config"),{wa_text:waText.value});
   showToast("Tersimpan");
@@ -307,7 +321,7 @@ async function loadText(){
   if(snap.exists()) waText.value = snap.data().wa_text || "";
 }
 
-// LOGOUT
+/* LOGOUT */
 window.logout = ()=>signOut(auth);
 
 </script>
