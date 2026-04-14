@@ -6,26 +6,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #0f172a, #020617);
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background: #0f172a;
       color: white;
     }
 
-    .card {
-      background: #020617;
-      padding: 30px;
-      border-radius: 16px;
-      width: 320px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    .wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
     }
 
-    h2 {
+    /* LEFT SIDE */
+    .left {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      background: linear-gradient(135deg, #1e293b, #020617);
+    }
+
+    .branding {
+      max-width: 350px;
+    }
+
+    .branding h1 {
+      margin-bottom: 10px;
+    }
+
+    .branding p {
+      opacity: 0.7;
+      font-size: 14px;
+    }
+
+    /* RIGHT SIDE */
+    .right {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 350px;
+      background: #020617;
+      padding: 30px;
+      border-radius: 14px;
+      border: 1px solid #1e293b;
+    }
+
+    .card h2 {
       margin-bottom: 20px;
       text-align: center;
     }
@@ -58,29 +93,55 @@
 
     .error {
       color: #ef4444;
-      font-size: 14px;
       text-align: center;
       margin-top: 10px;
+      font-size: 14px;
     }
 
-    .loading {
-      opacity: 0.6;
-      pointer-events: none;
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .wrapper {
+        grid-template-columns: 1fr;
+      }
+
+      .left {
+        display: none;
+      }
+
+      .right {
+        height: 100vh;
+      }
     }
   </style>
 </head>
 
 <body>
 
-<div class="card">
-  <h2>Login</h2>
+<div class="wrapper">
 
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="branding">
+      <h1>WA Rotator</h1>
+      <p>Sistem distribusi lead otomatis untuk tim CS kamu.  
+      Lebih cepat, lebih rapi, dan terukur.</p>
+    </div>
+  </div>
 
-  <button onclick="login()" id="btnLogin">Masuk</button>
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="card">
+      <h2>Masuk</h2>
 
-  <div class="error" id="error"></div>
+      <input id="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Password">
+
+      <button onclick="login()" id="btnLogin">Masuk</button>
+
+      <div class="error" id="error"></div>
+    </div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -90,36 +151,33 @@ import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/fir
 
 // 🔥 GANTI CONFIG
 const firebaseConfig = {
-  apiKey: "ISI_API_KEY",
-  authDomain: "ISI_AUTH_DOMAIN",
-  projectId: "ISI_PROJECT_ID"
+  apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
+  authDomain: "wa-rotator.firebaseapp.com",
+  projectId: "wa-rotator"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🔐 LOGIN
 window.login = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   const btn = document.getElementById("btnLogin");
-  const errorDiv = document.getElementById("error");
+  const error = document.getElementById("error");
 
-  errorDiv.innerText = "";
+  error.innerText = "";
   btn.innerText = "Loading...";
-  btn.classList.add("loading");
+  btn.disabled = true;
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-
     window.location.href = "/dashboard.html";
-
-  } catch (e) {
-    errorDiv.innerText = "Email atau password salah";
+  } catch {
+    error.innerText = "Email atau password salah";
   }
 
   btn.innerText = "Masuk";
-  btn.classList.remove("loading");
+  btn.disabled = false;
 };
 
 </script>
