@@ -1,139 +1,124 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard WA Rotator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Dashboard WA Rotator</title>
 
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f172a;
-      color: white;
-      margin: 0;
-    }
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+}
 
-    header {
-      padding: 16px 24px;
-      background: #020617;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #1e293b;
-    }
+header {
+  padding: 15px;
+  background: #020617;
+  display: flex;
+  justify-content: space-between;
+}
 
-    h1 {
-      font-size: 18px;
-      margin: 0;
-    }
+.container {
+  padding: 20px;
+}
 
-    button {
-      background: #3b82f6;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-    }
+.card {
+  background: #020617;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
 
-    .danger {
-      background: #ef4444;
-    }
+input, textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: white;
+}
 
-    .container {
-      padding: 20px;
-    }
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
 
-    .card {
-      background: #020617;
-      border: 1px solid #1e293b;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-    }
+.danger {
+  background: #ef4444;
+}
 
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #1e293b;
-      background: #020617;
-      color: white;
-      margin-top: 8px;
-      margin-bottom: 12px;
-    }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
+  gap: 10px;
+}
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 16px;
-    }
+.user {
+  background: #020617;
+  padding: 12px;
+  border-radius: 10px;
+}
 
-    .user-card {
-      background: #020617;
-      border: 1px solid #1e293b;
-      padding: 16px;
-      border-radius: 12px;
-    }
+.badge {
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
 
-    .badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-    }
+.on { background: green; }
+.off { background: red; }
 
-    .active {
-      background: #16a34a;
-    }
-
-    .inactive {
-      background: #dc2626;
-    }
-  </style>
+/* TOAST */
+#toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 15px;
+  border-radius: 6px;
+  color: white;
+  opacity: 0;
+  transition: 0.3s;
+}
+</style>
 </head>
 
 <body>
 
 <header>
-  <h1>WA Rotator Dashboard</h1>
+  <b>WA Rotator Dashboard</b>
   <button onclick="logout()">Logout</button>
 </header>
 
 <div class="container">
 
-  <!-- ADD CS -->
-  <div class="card">
-    <h3>Tambah CS</h3>
-    <input id="nama" placeholder="Nama CS">
-    <input id="wa" placeholder="Nomor WA (628xxxx)">
-    <button onclick="addUser()">Tambah</button>
-  </div>
+<div class="card">
+  <h3>Tambah CS</h3>
+  <input id="nama" placeholder="Nama">
+  <input id="wa" placeholder="628xxxx">
+  <button onclick="addUser()">Tambah</button>
+</div>
 
-  <!-- WA TEXT (ADMIN ONLY) -->
-  <div class="card" id="wa-setting">
-    <h3>Setting Pesan WhatsApp</h3>
-    <textarea id="waText"></textarea>
-    <button onclick="saveText()">Simpan</button>
-  </div>
+<div class="card" id="wa-setting">
+  <h3>Pesan WhatsApp</h3>
+  <textarea id="waText"></textarea>
+  <button onclick="saveText()">Simpan</button>
+</div>
 
-  <!-- LIST -->
-  <div class="grid" id="list"></div>
+<div id="list" class="grid"></div>
 
 </div>
 
+<div id="toast"></div>
+
 <script type="module">
-function showToast(message, type = "success") {
-  const toast = document.getElementById("toast");
 
-  toast.innerText = message;
-  toast.style.background = type === "error" ? "#dc2626" : "#16a34a";
-
-  toast.style.opacity = "1";
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-  }, 2000);
-}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, doc,
@@ -144,11 +129,10 @@ import {
   getAuth, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// 🔥 CONFIG KAMU
 const firebaseConfig = {
   apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
   authDomain: "wa-rotator.firebaseapp.com",
-  projectId: "wa-rotator",
+  projectId: "wa-rotator"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -158,6 +142,15 @@ const auth = getAuth(app);
 let currentUser;
 let userRole = "staff";
 
+// 🔔 TOAST
+window.showToast = function(msg, type="success") {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.background = type === "error" ? "#dc2626" : "#16a34a";
+  t.style.opacity = 1;
+  setTimeout(()=> t.style.opacity = 0, 2000);
+}
+
 // 🔐 LOGIN CHECK
 onAuthStateChanged(auth, async user => {
   if (!user) {
@@ -166,139 +159,128 @@ onAuthStateChanged(auth, async user => {
   }
 
   currentUser = user;
-
   await loadRole();
   handleAccess();
   loadUsers();
   loadText();
 });
 
-// 🔐 LOAD ROLE
+// 🔐 ROLE
 async function loadRole() {
   const ref = doc(db, "roles", currentUser.uid);
   const snap = await getDoc(ref);
-
-  if (snap.exists()) {
-    userRole = snap.data().role;
-  }
+  if (snap.exists()) userRole = snap.data().role;
 }
 
-// 🔒 BATASI AKSES
+// 🔒 ACCESS
 function handleAccess() {
   if (userRole !== "admin") {
     document.getElementById("wa-setting").style.display = "none";
   }
 }
 
-// ➕ TAMBAH CS
-async function addUser() {
+// ➕ ADD USER
+window.addUser = async function() {
   const nama = document.getElementById("nama").value;
   const wa = document.getElementById("wa").value;
 
-  await addDoc(collection(db, "users"), {
-    nama,
-    wa_number: wa,
-    active: true,
-    total_leads: 0,
-    owner_uid: currentUser.uid
-  });
+  try {
+    await addDoc(collection(db, "users"), {
+      nama,
+      wa_number: wa,
+      active: true,
+      total_leads: 0,
+      owner_uid: currentUser.uid
+    });
 
-  loadUsers();
-}
+    showToast("Berhasil tambah CS");
+    loadUsers();
+
+  } catch {
+    showToast("Gagal tambah CS", "error");
+  }
+};
 
 // 📋 LOAD USERS
 async function loadUsers() {
-  const snapshot = await getDocs(collection(db, "users"));
+  const snap = await getDocs(collection(db, "users"));
   const list = document.getElementById("list");
   list.innerHTML = "";
 
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
+  snap.forEach(d => {
+    const data = d.data();
 
     if (userRole !== "admin" && data.owner_uid !== currentUser.uid) return;
 
     list.innerHTML += `
-      <div class="user-card">
+      <div class="user">
         <b>${data.nama}</b><br>
-        ${data.wa_number}<br><br>
-
+        ${data.wa_number}<br>
         Leads: ${data.total_leads || 0}<br><br>
 
-        <span class="badge ${data.active ? 'active' : 'inactive'}">
-          ${data.active ? 'ON' : 'OFF'}
-        </span>
-        <br><br>
+        <span class="badge ${data.active ? 'on':'off'}">
+          ${data.active ? 'ON':'OFF'}
+        </span><br><br>
 
-        <button onclick="toggle('${docSnap.id}', ${data.active})">
-          Toggle
-        </button>
+        <button onclick="toggle('${d.id}', ${data.active})">Toggle</button>
 
-        ${userRole === "admin" ? `
-          <button class="danger" onclick="deleteUser('${docSnap.id}')">
-            Hapus
-          </button>
-        ` : ""}
+        ${userRole==="admin" ? `
+          <button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>
+        `:""}
       </div>
     `;
   });
 }
 
 // 🔄 TOGGLE
-window.toggle = async (id, status) => {
-  await updateDoc(doc(db, "users", id), {
-    active: !status
-  });
-  loadUsers();
+window.toggle = async function(id, status) {
+  try {
+    await updateDoc(doc(db, "users", id), { active: !status });
+    showToast("Status diubah");
+    loadUsers();
+  } catch {
+    showToast("Gagal update", "error");
+  }
 };
 
-// 🗑 DELETE (ADMIN ONLY)
-window.deleteUser = async (id) => {
-  if (!confirm("Yakin hapus CS ini?")) return;
+// 🗑 DELETE
+window.deleteUser = async function(id) {
+  if (!confirm("Hapus CS?")) return;
 
-  await deleteDoc(doc(db, "users", id));
-  loadUsers();
+  try {
+    await deleteDoc(doc(db, "users", id));
+    showToast("Berhasil dihapus");
+    loadUsers();
+  } catch {
+    showToast("Gagal hapus", "error");
+  }
 };
 
 // 💬 SAVE TEXT
-async function saveText() {
+window.saveText = async function() {
   const text = document.getElementById("waText").value;
 
-  await setDoc(doc(db, "settings", "config"), {
-    wa_text: text
-  });
-
-  alert("Tersimpan");
-}
+  try {
+    await setDoc(doc(db, "settings", "config"), { wa_text: text });
+    showToast("Pesan disimpan");
+  } catch {
+    showToast("Gagal simpan", "error");
+  }
+};
 
 // 📥 LOAD TEXT
 async function loadText() {
   const ref = doc(db, "settings", "config");
   const snap = await getDoc(ref);
-
   if (snap.exists()) {
     document.getElementById("waText").value = snap.data().wa_text;
   }
 }
 
 // 🚪 LOGOUT
-window.logout = () => {
-  signOut(auth);
-};
-
+window.logout = () => signOut(auth);
 
 </script>
 
- <div id="toast" style="
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #16a34a;
-  padding: 12px 16px;
-  border-radius: 8px;
-  color: white;
-  z-index: 9999;
-  opacity: 0;
-  transition: all 0.3s ease;
-"></div>
 </body>
 </html>
