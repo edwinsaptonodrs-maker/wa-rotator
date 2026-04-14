@@ -6,7 +6,7 @@
 
 <style>
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: Arial, sans-serif;
   background: #0f172a;
   color: white;
   margin: 0;
@@ -15,10 +15,10 @@ body {
 /* HEADER */
 header {
   background: #020617;
-  padding: 16px 24px;
+  padding: 16px;
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #1e293b;
+  align-items: center;
 }
 
 /* CONTAINER */
@@ -32,22 +32,21 @@ header {
 .card {
   background: #020617;
   border: 1px solid #1e293b;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
 }
 
 /* FORM */
 .form-row {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
 input, textarea {
   flex: 1;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #1e293b;
   background: #0f172a;
   color: white;
@@ -55,53 +54,46 @@ input, textarea {
 
 textarea {
   resize: vertical;
-  min-height: 80px;
 }
 
 /* BUTTON */
 button {
-  padding: 10px 14px;
+  padding: 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #3b82f6;
   color: white;
   cursor: pointer;
 }
 
-button:hover {
-  background: #2563eb;
-}
-
 .danger {
-  background: #ef4444;
+  background: red;
 }
 
 /* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(250px,1fr));
+  gap: 10px;
 }
 
-/* USER CARD */
+/* USER */
 .user-card {
   background: #020617;
   border: 1px solid #1e293b;
-  border-radius: 12px;
-  padding: 14px;
+  padding: 12px;
+  border-radius: 10px;
 }
 
-/* BADGE */
 .badge {
-  padding: 4px 8px;
+  display: inline-block;
+  padding: 3px 8px;
   border-radius: 6px;
   font-size: 12px;
-  margin-top: 6px;
-  display: inline-block;
 }
 
-.on { background: #16a34a; }
-.off { background: #dc2626; }
+.on { background: green; }
+.off { background: red; }
 
 /* TOAST */
 #toast {
@@ -109,16 +101,9 @@ button:hover {
   top: 20px;
   right: 20px;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   opacity: 0;
   transition: 0.3s;
-}
-
-/* MOBILE */
-@media(max-width:600px){
-  .form-row {
-    flex-direction: column;
-  }
 }
 </style>
 </head>
@@ -144,15 +129,11 @@ button:hover {
 
 <!-- TEXT -->
 <div class="card" id="text-panel" style="display:none;">
-  <div style="font-weight:600; margin-bottom:8px;">
-    Pesan WhatsApp
-  </div>
+  <b>Pesan WhatsApp</b><br><br>
 
-  <textarea id="waText" placeholder="Contoh: Halo, saya tertarik..."></textarea>
+  <textarea id="waText"></textarea><br><br>
 
-  <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-    <button onclick="saveText()">Simpan</button>
-  </div>
+  <button onclick="saveText()">Simpan</button>
 </div>
 
 <!-- INPUT -->
@@ -199,23 +180,20 @@ const auth = getAuth(app);
 const secondApp = initializeApp(firebaseConfig, "Secondary");
 const secondAuth = getAuth(secondApp);
 
-let currentUser;
 let role = "staff";
 
 /* TOAST */
-function showToast(msg, type="success"){
+function toast(msg, type="ok"){
   const t = document.getElementById("toast");
   t.innerText = msg;
-  t.style.background = type==="error" ? "#dc2626" : "#16a34a";
+  t.style.background = type==="error" ? "red" : "green";
   t.style.opacity = 1;
-  setTimeout(()=> t.style.opacity = 0,2000);
+  setTimeout(()=>t.style.opacity=0,2000);
 }
 
 /* AUTH */
 onAuthStateChanged(auth, async user=>{
   if(!user) return location.href="/login.html";
-
-  currentUser = user;
 
   const r = await getDoc(doc(db,"roles",user.uid));
   if(r.exists()) role = r.data().role;
@@ -231,30 +209,25 @@ onAuthStateChanged(auth, async user=>{
 
 /* ADD USER */
 window.addUser = async ()=>{
-  const nama = document.getElementById("nama").value.trim();
-  const wa = document.getElementById("wa").value.trim();
+  const nama = document.getElementById("nama").value;
+  const wa = document.getElementById("wa").value;
 
-  if(!nama || !wa) return showToast("Isi semua field","error");
-  if(!/^[0-9]+$/.test(wa)) return showToast("Nomor harus angka","error");
-  if(!wa.startsWith("62")) return showToast("Harus diawali 62","error");
+  if(!nama || !wa) return toast("Isi semua","error");
+  if(!wa.startsWith("62")) return toast("Harus diawali 62","error");
 
   await addDoc(collection(db,"users"),{
     nama,
     wa_number: wa,
     active: true,
-    total_leads: 0,
-    owner_uid: currentUser.uid
+    total_leads: 0
   });
 
-  showToast("Berhasil ditambahkan");
-
-  document.getElementById("nama").value="";
-  document.getElementById("wa").value="";
+  toast("Berhasil ditambah");
 
   loadUsers();
 };
 
-/* LOAD USERS (FIX DATA LAMA) */
+/* LOAD USERS (TANPA FILTER BIAR AMAN) */
 async function loadUsers(){
   const snap = await getDocs(collection(db,"users"));
   list.innerHTML="";
@@ -262,23 +235,18 @@ async function loadUsers(){
   snap.forEach(d=>{
     const data = d.data();
 
-    // ✅ FIX: data lama tetap tampil
-    if(role!=="admin" && data.owner_uid && data.owner_uid !== currentUser.uid) return;
-
     list.innerHTML += `
     <div class="user-card">
       <b>${data.nama}</b><br>
-      <small>${data.wa_number}</small><br>
+      ${data.wa_number}<br>
       Leads: ${data.total_leads || 0}<br>
 
       <span class="badge ${data.active?'on':'off'}">
         ${data.active?'ON':'OFF'}
-      </span>
+      </span><br><br>
 
-      <div style="margin-top:10px; display:flex; gap:6px;">
-        <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
-        ${role==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>` : ""}
-      </div>
+      <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
+      <button class="danger" onclick="del('${d.id}')">Hapus</button>
     </div>`;
   });
 }
@@ -290,8 +258,8 @@ window.toggle = async(id,status)=>{
 };
 
 /* DELETE */
-window.deleteUser = async(id)=>{
-  if(!confirm("Hapus nomor ini?")) return;
+window.del = async(id)=>{
+  if(!confirm("Hapus?")) return;
   await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
@@ -301,12 +269,10 @@ window.createStaff = async ()=>{
   const email = newEmail.value;
   const pass = newPassword.value;
 
-  if(!email||!pass) return showToast("Isi semua","error");
-
   const u = await createUserWithEmailAndPassword(secondAuth,email,pass);
   await setDoc(doc(db,"roles",u.user.uid),{role:"staff"});
 
-  showToast("Staff berhasil dibuat");
+  toast("Staff dibuat");
 };
 
 /* TEXT */
@@ -315,7 +281,7 @@ window.saveText = async()=>{
     wa_text: waText.value
   });
 
-  showToast("Pesan tersimpan");
+  toast("Tersimpan");
 };
 
 async function loadText(){
