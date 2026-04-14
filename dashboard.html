@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard WA Rotator</title>
+<title>WA Rotator Dashboard</title>
 
 <style>
 body {
@@ -18,12 +18,7 @@ header {
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   border-bottom: 1px solid #1e293b;
-}
-
-header b {
-  font-size: 18px;
 }
 
 /* CONTAINER */
@@ -47,7 +42,6 @@ header b {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 10px;
 }
 
 input, textarea {
@@ -59,6 +53,11 @@ input, textarea {
   color: white;
 }
 
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
 /* BUTTON */
 button {
   padding: 10px 14px;
@@ -67,7 +66,6 @@ button {
   background: #3b82f6;
   color: white;
   cursor: pointer;
-  white-space: nowrap;
 }
 
 button:hover {
@@ -78,14 +76,14 @@ button:hover {
   background: #ef4444;
 }
 
-/* USER GRID */
+/* GRID */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
   gap: 12px;
 }
 
-/* USER CARD */
+/* CARD USER */
 .user-card {
   background: #020617;
   border: 1px solid #1e293b;
@@ -93,21 +91,13 @@ button:hover {
   padding: 14px;
 }
 
-.user-card b {
-  font-size: 14px;
-}
-
-.user-card small {
-  color: #94a3b8;
-}
-
 /* BADGE */
 .badge {
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 12px;
+  margin-top: 6px;
   display: inline-block;
-  margin-top: 8px;
 }
 
 .on { background: #16a34a; }
@@ -118,13 +108,13 @@ button:hover {
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 10px 14px;
+  padding: 10px;
   border-radius: 8px;
   opacity: 0;
   transition: 0.3s;
 }
 
-/* RESPONSIVE */
+/* MOBILE */
 @media(max-width:600px){
   .form-row {
     flex-direction: column;
@@ -152,11 +142,15 @@ button:hover {
   </div>
 </div>
 
-<!-- TEXT -->
+<!-- TEXT WA -->
 <div class="card" id="text-panel" style="display:none;">
-  <b>Pesan WhatsApp</b>
-  <textarea id="waText" rows="3"></textarea>
-  <div style="margin-top:10px;">
+  <div style="font-weight:600; margin-bottom:8px;">
+    Pesan WhatsApp
+  </div>
+
+  <textarea id="waText" placeholder="Contoh: Halo, saya tertarik..." ></textarea>
+
+  <div style="display:flex; justify-content:flex-end; margin-top:10px;">
     <button onclick="saveText()">Simpan</button>
   </div>
 </div>
@@ -191,6 +185,7 @@ import {
   createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+/* CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyBvot2y7CY0oTfPs-eanZI73X_r3vdZ_Bc",
   authDomain: "wa-rotator.firebaseapp.com",
@@ -205,7 +200,7 @@ const secondApp = initializeApp(firebaseConfig, "Secondary");
 const secondAuth = getAuth(secondApp);
 
 let currentUser;
-let userRole = "staff";
+let role = "staff";
 
 /* TOAST */
 function showToast(msg, type="success"){
@@ -222,12 +217,12 @@ onAuthStateChanged(auth, async user=>{
 
   currentUser = user;
 
-  const roleSnap = await getDoc(doc(db,"roles",user.uid));
-  if(roleSnap.exists()) userRole = roleSnap.data().role;
+  const r = await getDoc(doc(db,"roles",user.uid));
+  if(r.exists()) role = r.data().role;
 
-  if(userRole==="admin"){
-    document.getElementById("admin-panel").style.display="block";
-    document.getElementById("text-panel").style.display="block";
+  if(role==="admin"){
+    admin-panel.style.display="block";
+    text-panel.style.display="block";
   }
 
   loadUsers();
@@ -240,17 +235,21 @@ window.addUser = async ()=>{
   const wa = document.getElementById("wa").value.trim();
 
   if(!nama || !wa) return showToast("Isi semua field","error");
-  if(!/^[0-9]+$/.test(wa)) return showToast("Harus angka","error");
+  if(!/^[0-9]+$/.test(wa)) return showToast("Nomor harus angka","error");
   if(!wa.startsWith("62")) return showToast("Harus diawali 62","error");
 
   await addDoc(collection(db,"users"),{
-    nama, wa_number:wa, active:true, total_leads:0, owner_uid:currentUser.uid
+    nama,
+    wa_number: wa,
+    active: true,
+    total_leads: 0,
+    owner_uid: currentUser.uid
   });
 
   showToast("Berhasil ditambahkan");
 
-  document.getElementById("nama").value="";
-  document.getElementById("wa").value="";
+  nama.value="";
+  wa.value="";
 
   loadUsers();
 };
@@ -258,19 +257,18 @@ window.addUser = async ()=>{
 /* LOAD USERS */
 async function loadUsers(){
   const snap = await getDocs(collection(db,"users"));
-  const list = document.getElementById("list");
   list.innerHTML="";
 
   snap.forEach(d=>{
     const data = d.data();
 
-    if(userRole!=="admin" && data.owner_uid!==currentUser.uid) return;
+    if(role!=="admin" && data.owner_uid!==currentUser.uid) return;
 
     list.innerHTML += `
     <div class="user-card">
       <b>${data.nama}</b><br>
       <small>${data.wa_number}</small><br>
-      Leads: ${data.total_leads||0}<br>
+      Leads: ${data.total_leads || 0}<br>
 
       <span class="badge ${data.active?'on':'off'}">
         ${data.active?'ON':'OFF'}
@@ -278,7 +276,7 @@ async function loadUsers(){
 
       <div style="margin-top:10px; display:flex; gap:6px;">
         <button onclick="toggle('${d.id}',${data.active})">Toggle</button>
-        ${userRole==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>` : ""}
+        ${role==="admin" ? `<button class="danger" onclick="deleteUser('${d.id}')">Hapus</button>` : ""}
       </div>
     </div>`;
   });
@@ -292,7 +290,7 @@ window.toggle = async(id,status)=>{
 
 /* DELETE */
 window.deleteUser = async(id)=>{
-  if(!confirm("Hapus?")) return;
+  if(!confirm("Hapus nomor ini?")) return;
   await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
@@ -307,18 +305,21 @@ window.createStaff = async ()=>{
   const u = await createUserWithEmailAndPassword(secondAuth,email,pass);
   await setDoc(doc(db,"roles",u.user.uid),{role:"staff"});
 
-  showToast("Staff dibuat");
+  showToast("Staff berhasil dibuat");
 };
 
 /* TEXT */
 window.saveText = async()=>{
-  await setDoc(doc(db,"settings","config"),{wa_text:waText.value});
-  showToast("Tersimpan");
+  await setDoc(doc(db,"settings","config"),{
+    wa_text: waText.value
+  });
+
+  showToast("Pesan tersimpan");
 };
 
 async function loadText(){
-  const snap = await getDoc(doc(db,"settings","config"));
-  if(snap.exists()) waText.value = snap.data().wa_text || "";
+  const s = await getDoc(doc(db,"settings","config"));
+  if(s.exists()) waText.value = s.data().wa_text || "";
 }
 
 /* LOGOUT */
